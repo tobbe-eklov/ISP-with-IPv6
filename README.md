@@ -5,10 +5,12 @@ Dependecies -
 dig, curl, expect, mysql
 
 Test domains - put this in crontab and run every day
+
 test sverige isp ipv6
 
 Import into database ( change username, password and databasename )
-importISP.php
+
+importISP.php - also in crontab
 
 Put webb directory in your public_html, change loadData.php with correct username, password and databasename
 
