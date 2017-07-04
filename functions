@@ -1,0 +1,174 @@
+#!/bin/bash
+
+# Basedir - base directory where domain file reads and results is stored in sub dir
+basedir="/usr/local/var"
+# Result / domain and function
+resultdir="$basedir/$country/$target/result"
+# history directory
+historydir="$basedir/$country/$target/history"
+# Domain's to check
+domainfile="$basedir/$country/$target/domain"
+
+if [ ! -f "$domainfile" ] ; then
+	echo "$domainfile doesn't exist"
+	exit
+fi
+
+if [ ! -d "$resultdir" ] ; then
+	mkdir -p "$resultdir"
+fi
+if [ ! -d "$historydir" ] ; then
+	mkdir -p "$historydir"
+fi
+
+date=`date +"%Y%m%d"`
+
+function checkdns {
+	i=$1
+	dnscheck=0
+	DNS=`dig  ns  $i @8.8.4.4 |grep ^$i| awk '{ print $5}'`
+                for ns in $DNS ; do
+                        echo testing DNS $ns
+                        if [ "`dig +short -taaaa $ns`" ] && [ "$dnscheck" = "0" ] ; then
+                                if [ "`echo $ns | grep $i`" != "" ] ; then
+                                        #if [ "`dig +norec $ns @a.ns.se|grep AAAA|grep $ns`" != "" ] ; then
+                                        if [ "`dig +short -taaaa $ns 8.8.4.4 `" != "" ] ; then
+                                                echo $i >> $dnsfile
+                                                dnscheck=1
+                                        fi
+                                fi
+                                if [ "`echo $ns | grep $i`" = "" ] ; then
+                                        echo $i >> $dnsfile
+                                        dnscheck=1
+                                fi
+                        fi
+                        if [ "`dig -taaaa +short $ns`" != "" ] ; then
+                                echo testing dns $ns
+				echo 
+                                res=`dig -6 +short +time=2 ns $i @$ns 2>&1 `
+                                if [ $? != "0" ] ; then
+                                        echo $ns is not responding
+                                        if [ ! `grep $i $resultdir/ipv6/errdns6` ] ; then
+                                                echo $i >> $resultdir/ipv6/errdns6
+                                        fi
+                                fi
+                                if [ "$res" = "" ] ; then
+                                        echo $ns is not  auth
+                                                if [ ! `grep $i $resultdir/ipv6/errdns6` ] ; then
+                                                        echo $i >> $resultdir/ipv6/errdns6
+                                                fi
+                                fi
+                        fi
+                done
+}
+
+function checkmx {
+	i=$1
+	mxcheck=0
+	MX=`dig +short mx $i @8.8.8.8|awk '{print $2}'`
+                for mx in $MX ; do
+                        if [ "`dig +short -taaaa $mx`"  ] ; then
+				echo Checking MX for $i
+				echo
+                                if [ ! "`grep ^$i $mxfile`" ] ; then
+                                        echo $i >> $mxfile
+                                fi
+                                mxcheck=1
+                                echo testing $i and mailserver $mx
+				echo
+                                expect /usr/local/bin/smtptest $mx info@interlan.se registrar@$i
+                                if [ $? != "0" ] ; then
+                                        if [ ! `grep ^$i $resultdir/ipv6/errmx6` ] ; then
+                                                echo $i >> $resultdir/ipv6/errmx6
+                                        fi
+                                fi
+                        fi
+                done
+}
+
+function checkwww {
+	i=$1
+	wwwcheck=0
+	if [ "`dig +short -taaaa www.$i|grep :`"  ] ; then
+		echo Checking www for $i
+		echo
+                echo $i >>$wwwfile
+
+                echo --- Testing www for $i
+		echo
+                curl -o /dev/null -s -6 -m 6  www.$i
+                if [ $? != "0" ] ; then
+                       echo www.$i is not responding
+                      echo $i >>$resultdir/ipv6/errwww6
+                fi
+         fi
+}
+
+function checkipv6 {
+	if [ ! -d "$historydir/ipv6/$date" ] ; then
+		mkdir -p "$historydir/ipv6/$date"
+	fi
+	cp -v $resultdir/ipv6/* $historydir/ipv6/$date
+	if [ ! -d "$resultdir/ipv6" ] ; then
+		mkdir -p "$resultdir/ipv6"
+	fi
+
+	dnsfile=$resultdir/ipv6/dns6
+	mxfile=$resultdir/ipv6/mx6
+	wwwfile=$resultdir/ipv6/www6
+	cat /dev/null >$resultdir/ipv6/errwww6
+	cat /dev/null >$resultdir/ipv6/errdns6
+	cat /dev/null >$resultdir/ipv6/errmx6
+	cat /dev/null >$resultdir/ipv6/www6
+	cat /dev/null >$resultdir/ipv6/dns6
+	cat /dev/null >$resultdir/ipv6/mx6
+	cat /dev/null >$resultdir/ipv6/truewww6
+    	cat /dev/null >$resultdir/ipv6/truedns6
+    	cat /dev/null >$resultdir/ipv6/truemx6
+	
+	antal=0
+	for i in `cat $domainfile` ; do
+        	echo ----------------- 1>&2
+        	echo checking $i 1>&2
+        	unset alias     
+		checkdns $i &
+		checkmx $i &
+		checkwww $i &
+		echo "------- Antal=$antal --------"
+		antal=$((antal+1))
+                if [ $antal -eq "50" ]; then
+                        wait
+                        echo
+                        echo $antal klara
+                        echo
+                        antal=0
+                fi
+        
+	done
+	wait
+	echo
+	echo Done scanning!
+	echo
+	for i in `cat $resultdir/ipv6/www6` ; do
+		echo getting true www
+        	if [ ! "`cat $resultdir/ipv6/errwww6| grep $i`" ] ; then
+                	echo $i >> $resultdir/ipv6/truewww6
+        	fi
+	done    
+	for i in `cat $resultdir/ipv6/dns6` ; do
+		echo getting true dns
+        	if [ ! "`cat $resultdir/ipv6/errdns6| grep $i`" ] ; then
+                	echo $i >> $resultdir/ipv6/truedns6
+        	fi
+	done
+	for i in `cat $resultdir/ipv6/mx6` ; do
+		echo getting true mx
+        	if [ ! "`cat $resultdir/ipv6/errmx6| grep ^$i`" ] ; then
+                	echo $i >> $resultdir/ipv6/truemx6
+        	fi
+	done
+
+
+
+
+}

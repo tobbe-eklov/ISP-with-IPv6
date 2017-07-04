@@ -1,0 +1,24 @@
+#!/bin/bash
+country=$1
+target=$2
+# Country - exsverige, norge, danmark, finland
+# target kommun, myndighet mm.
+
+# $3 dns eller ipv6
+
+if [ "$#" != "3" ] ; then
+        echo Usage: $0 country category ipv6
+        exit
+fi
+
+cd /usr/local/bin
+
+. ./functions
+
+
+case $3 in
+        ipv6)
+                checkipv6 
+                ;;
+esac
+
