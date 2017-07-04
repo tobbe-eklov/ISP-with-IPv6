@@ -1,6 +1,6 @@
 # ISP-with-IPv6
 Script and more to create https://ispmedipv6.se/
-It's little messy but it works. Working on an LAMP based on Ubuntu 16.04.
+It's little messy but it works. Working on a LAMP based on Ubuntu 16.04.
 Dependecies -
 dig, curl, expect, mysql
 
