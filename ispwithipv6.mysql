@@ -1,0 +1,26 @@
+CREATE TABLE `ispIpv6` (
+  `aiId` int(11) NOT NULL AUTO_INCREMENT,
+  `aiDomain` varchar(200) DEFAULT NULL,
+  `aiDns6` tinyint(4) DEFAULT NULL,
+  `aiErrdns6` tinyint(4) DEFAULT NULL,
+  `aiTruedns6` tinyint(4) DEFAULT NULL,
+  `aiMx6` tinyint(4) DEFAULT NULL,
+  `aiErrmx6` tinyint(4) DEFAULT NULL,
+  `aiTruemx6` tinyint(4) DEFAULT NULL,
+  `aiWww6` tinyint(4) DEFAULT NULL,
+  `aiErrwww6` tinyint(4) DEFAULT NULL,
+  `aiTruewww6` tinyint(4) DEFAULT NULL,
+  `aiInsDate` datetime DEFAULT NULL,
+  PRIMARY KEY (`aiId`)
+) ENGINE=InnoDB AUTO_INCREMENT=152425 DEFAULT CHARSET=latin1;
+
+DROP TABLE IF EXISTS `isp`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `isp` (
+  `aId` int(11) NOT NULL AUTO_INCREMENT,
+  `aCountryId` int(11) NOT NULL,
+  `aDomain` varchar(200) NOT NULL,
+  `aInsDate` datetime DEFAULT NULL,
+  PRIMARY KEY (`aId`)
+) ENGINE=InnoDB AUTO_INCREMENT=229 DEFAULT CHARSET=latin1;
